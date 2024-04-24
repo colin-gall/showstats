@@ -1,7 +1,7 @@
 # showstats
 Python script for downloading attributes and statistics for all currently available Diamond Dynasty player card items in MLB The Show '24 . 
 
-(relative%20path/to/img.jpg?raw=true "Title")
+![.img/example](.img/example.png)
 
 
 
@@ -23,3 +23,8 @@ Data will be saved to an Excel file in the user's home directory, but in the eve
 > ./mlbtheshow_data_YYMMDD.xlsx
 
 > /usr/home/dir/mlbtheshow_dataloss_YYMMDD.pkl 
+
+
+
+
+# Author
