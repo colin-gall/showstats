@@ -13,7 +13,7 @@ __repository__ = 'showstats'
 __license__ = "MIT"
 __version__ = "0.0.1"
 __location__ = "https://github.com/colin-gall/showstats/"
-__author__ = "colingall"
+__author__ = "colin-gall"
 __email__ = "colingall@pm.me"
 
 def convert_json(param="items", page=1):
@@ -25,6 +25,17 @@ def convert_json(param="items", page=1):
     page = requests.get(url)
     if page.status_code == 200:
         return page.json()
+    else:
+        retries = 0
+        while retries < 2:
+            try:
+                print("Attempting to fetch data (retries left: %i)" % (2 - retries))
+                page = requests.get(url, timeout=5)
+                # raises HTTP error for bad responses
+                requests.raise_for_status()
+                return page.json
+            except:
+                retries += 1
 
 def download_data(param="items"):
     '''Total page count is determined, JSON data is gathered for each page from API and stored in cumulative list at the end of each iteration, and finally data is parsed, organized, and returned as a Pandas dataframe.'''
