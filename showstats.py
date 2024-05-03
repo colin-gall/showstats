@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 
+
 import os
 import argparse
 from datetime import date
+
 
 import json
 import requests
 import pandas as pd
 from tqdm.auto import tqdm
 
+
 __repository__ = 'showstats'
 __license__ = "MIT"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __location__ = "https://github.com/colin-gall/showstats/"
 __author__ = "colin-gall"
 __email__ = "colingall@pm.me"
+
+
+PATHDIRS = [os.getcwd(), os.path.expanduser('~')]
+
 
 def convert_json(param="items", page=1):
     '''Handshakes with API address provided on MLB The Show 24 community market API docs and returns content as JSON object.'''
@@ -36,6 +43,7 @@ def convert_json(param="items", page=1):
                 return page.json
             except:
                 retries += 1
+
 
 def download_data(param="items"):
     '''Total page count is determined, JSON data is gathered for each page from API and stored in cumulative list at the end of each iteration, and finally data is parsed, organized, and returned as a Pandas dataframe.'''
@@ -59,41 +67,89 @@ def download_data(param="items"):
     df = pd.DataFrame.from_records(all_items, index=['uuid'])
     return df
 
+
 def create_file(df, filename=None):
-    '''Attempts to convert dataframe containing JSON data to Excel workbook file saved to current working directory, and creates a 'pkl' (i.e. pickle) file if it encounters any issues during the process to prevent data loss.''' 
+    '''Attempts to convert dataframe containing JSON data to Excel workbook file saved to current working directory, and creates a 'pkl' (i.e. pickle) file if it encounters any issues during the process to prevent data loss.'''
+    date_str = f"{date.today().year}{date.today().month}{date.today().day}"
     if filename is None:
-        filename = f"mlbtheshow_data_{date.today().year}{date.today().month}{date.today().day}.xlsx"
+        filename = f"mlbtheshow_data_{date_str}.xlsx"
+    elif filename[-4:] != 'xlsx' and filename[-3:] != 'csv':
+        filename = f"{filename}.xlsx"
     print(f'~ Attempting to create Excel file with the data collected for MLB The Show data (filename: {filename})')
     try:
-        df.to_excel(filename)
+        df.to_excel(os.path.join(os.getcwd(),filename))
     except:
+        filename = f"{filename[:-3]}csv"
+        df.to_csv(os.path.join(os.getcwd(),filename))
+    finally:
+        excel_file = f"mlbtheshow_data_{date_str}.xlsx"
+        csv_file = f"mlbtheshow_data_{date_str}.csv"
+        create_pickle = False
+        if os.path.exists(excel_file) is False and os.path.exists(csv_file) is False:
+            file_list = []
+            file_exts = []
+            # grabbing list of file names and file extensions to check for successful file creation
+            for p in PATHDIRS:
+                file_names = [f for f in os.listdir(p) if os.path.isfile(os.path.join(p,f))]
+                for x in file_names:
+                    file_list.append(x)
+                    file_exts.append(os.path.splitext(x)[-1].lower())
+            if '.xlsx' in file_exts or 'xlsx' in file_exts or '.csv' in file_exts or 'csv' in file_exts:
+                if excel_file in file_list or csv_file in file_list:
+                    create_pickle = False
+                else:
+                    create_pickle = True
+            else:
+                create_pickle = True
+        else:
+            create_pickle = True
+        # checks boolean and creates pickle file if true
+        if create_pickle is True:
+            print("~ Error occured while attempting to export data to '.xlsx' file and '.csv' file...")
+            try:
+                print("~ Attempting to create '.pkl' file to prevent loss of API data...")
+                pickle_file = f"mlbtheshow_dataloss_{date_str}.pkl"
+                df.to_pickle(os.path.join(os.getcwd(), pickle_file))
+                print(f"~ Successfully created '.pkl' file [{os.path.join(os.getcwd(), pickle_file)}]")
+            except:
+                print("Error occured while attempting to create '.pkl' file...")
+                print("Failed to prevent data loss after encountering multiple issues.")
+                sys.exit(1)
+        else:
+            print(f"Successfully exported data for MLB The Show [{os.path.join(os.getcwd(), filename)}]")
+            print('_____________\n|   Done!   |\n*-----------*')
+
+
+        '''
         try:
             filename = f"{os.path.expanduser('~')}/{filename}"
             df.to_excel(filename)
         except:
             try:
                 if filename is None:
-                    filename = f"{os.path.expanduser("~")}/mlbtheshow_data_{date.today().year}{date.today().month}{date.today().day}.csv"
+                    filename = f"{os.path.expanduser('~')}/mlbtheshow_data_{date.today().year}{date.today().month}{date.today().day}.csv"
                 df.to_csv(filename)
             except:
                 picklefile = f"{os.path.expanduser('~')}/mlbtheshow_dataloss_{date.today().year}{date.today().month}{date.today().day}.pkl"
                 df.to_pickle(picklefile)
-    if os.path.exists(picklefile):
-        print(f"~ Error occured when attempting to store data in both Excel & CSV file types...\
-            \nPandas data file (i.e. 'pickle' file or .pkl file) was created to prevent loss of data.\
-            \nLocation: {picklefile}")
-    else:
-        if filename[len(filename)-3:] == 'csv':
-            filetype = 'CSV'
+        if os.path.exists(picklefile):
+            print(f"~ Error occured when attempting to store data in both Excel & CSV file types...\
+                \nPandas data file (i.e. 'pickle' file or .pkl file) was created to prevent loss of data.\
+                \nLocation: {picklefile}")
         else:
-            filetype = 'Excel'
-        print(f"Successfully created {filetype} file containing MLB The Show data.\
-            \nLocation: {filename}")
+            if filename[len(filename)-3:] == 'csv':
+                filetype = 'CSV'
+            else:
+                filetype = 'Excel'
+            print(f"Successfully created {filetype} file containing MLB The Show data.\
+                \nLocation: {filename}")
+        '''
+
 
 def parse_arguments():
     '''Arguments passed during script execution are parsed and passed as parameters for customization in types of data to download from API'''
     parser = argparse.ArgumentParser()
-    parser.add_argument('datatype', type=str, default='items', required=False, help='Type of data to download from MLB The Show API')
+    parser.add_argument('-d','--datatype', type=str, default='items', help='Type of data to download from MLB The Show API')
     parser.add_argument('-f', '--filename', type=str, dest='filename', default=None, required=False, help='Name of file for storing data from Pandas dataframe (*INCLUDE EXTENSION*)')
     args = parser.parse_args()
     return args.datatype, args.filename
@@ -101,6 +157,8 @@ def parse_arguments():
 
 def execute():
     '''Runtime core functionality for script execution or if called as main module.'''
+    api_url = "https://mlb24.theshow.com/apis/"
+    print(f"~ Getting ready to download data from API for MLB The Show [{api_url}]...")
     datatype, filename = parse_arguments()
     df = download_data(datatype)
     if filename is not None:
@@ -108,6 +166,7 @@ def execute():
     else:
         create_file(df, filename)
     print('_____________\n|   Done!   |\n*-----------*')
+
 
 if __name__ == '__main__':
     execute()
