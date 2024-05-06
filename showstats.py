@@ -78,7 +78,7 @@ def download_data(param, platform, username=None):
             raise Exception(f"*{param}* is not a valid datatype for API requests. For a list of acceptable options, please pass one of the following as an argument:\n{PARAMS}")
     # checks platform type if parameter for data download is game history or if username is provided as an argument
     if param == 'game_history' or username is not None:
-        if platform.lower() is not PLATFORMS:
+        if platform.lower() not in PLATFORMS:
             if platform.upper() == 'PS5':
                 platform = 'psn'
             elif platform.lower() == 'xbox':
